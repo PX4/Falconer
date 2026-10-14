@@ -1,0 +1,34 @@
+# Spikes are local experiments, never committed
+/spikes/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# C++ / CMake
+/build/
+/build-*/
+CMakeUserPresets.json
+compile_commands.json
+.cache/
+
+# Node / Svelte
+node_modules/
+.svelte-kit/
+dist/
+
+# Tauri / Rust
+target/
+src-tauri/gen/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+*.ulg
