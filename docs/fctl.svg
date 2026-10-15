@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 712" width="760" height="712" role="img" aria-label="fctl: an all C++ client of the same backend and contract">
+  <title>fctl development stack</title>
+  <style>
+    .bg { fill: #ffffff; }
+    .ink { fill: #1f2328; }
+    .quiet { fill: #59636e; }
+    .box { fill: none; stroke: #b8b4aa; stroke-width: 1.25; }
+    .group { fill: #f6f8fa; stroke: #d1d9e0; stroke-width: 1.25; }
+    .proto { fill: #e6effa; stroke: #2f74d0; stroke-width: 2; }
+    .video { fill: #fdebe4; stroke: #e5612b; stroke-width: 2; }
+    .pervehicle { fill: #e2f4ee; stroke: #1f9e74; stroke-width: 2; }
+    .planned { stroke-dasharray: 6 4; }
+    .edge { fill: none; stroke: #b8b4aa; stroke-width: 1.25; }
+    .edge-proto { fill: none; stroke: #2f74d0; stroke-width: 1.5; }
+    .arrowhead-proto { fill: #2f74d0; }
+    .arrowhead { fill: #b8b4aa; }
+    .split { stroke: #1f9e74; stroke-width: 1.5; stroke-dasharray: 6 5; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .title { font-size: 16px; font-weight: 600; }
+    .name { font-size: 14px; font-weight: 600; }
+    .sub { font-size: 12.5px; }
+    .label { font-size: 13px; font-weight: 600; }
+    .note { font-size: 12px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .ink { fill: #e6edf3; }
+      .quiet { fill: #9198a1; }
+      .group { fill: #151b23; stroke: #3d444d; }
+      .box, .edge { stroke: #5a5f66; }
+      .arrowhead { fill: #5a5f66; }
+      .edge-proto { stroke: #4c8fe8; }
+      .arrowhead-proto { fill: #4c8fe8; }
+      .proto { fill: #12243d; stroke: #4c8fe8; }
+      .video { fill: #3a1d12; stroke: #f0794a; }
+      .pervehicle { fill: #0f2e24; stroke: #35b88b; }
+      .split { stroke: #35b88b; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" class="arrowhead"/>
+    </marker>
+    <marker id="arrow-proto" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" class="arrowhead-proto"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="760" height="712" rx="12"/>
+  <text class="title ink" x="24" y="36">fctl stands in for the UI: same backend, same contract, all C++</text>
+
+  <!-- fctl -->
+  <rect class="group" x="24" y="52" width="712" height="172" rx="12"/>
+  <text class="label ink" x="40" y="76">fctl (C++)</text>
+
+  <rect class="box" x="40" y="88" width="216" height="52" rx="8"/>
+  <text class="name ink" x="148" y="110" text-anchor="middle">fctl top</text>
+  <text class="sub quiet" x="148" y="129" text-anchor="middle">Live dashboard (FTXUI)</text>
+
+  <rect class="box" x="272" y="88" width="216" height="52" rx="8"/>
+  <text class="name ink" x="380" y="110" text-anchor="middle">Shell and scripts</text>
+  <text class="sub quiet" x="380" y="129" text-anchor="middle">fctl, fctl run</text>
+
+  <rect class="box" x="504" y="88" width="216" height="52" rx="8"/>
+  <text class="name ink" x="612" y="110" text-anchor="middle">SITL control</text>
+  <text class="sub quiet" x="612" y="129" text-anchor="middle">fctl sitl up, down, ps</text>
+
+  <rect class="proto" x="40" y="156" width="448" height="52" rx="8"/>
+  <text class="name ink" x="264" y="178" text-anchor="middle">Contract client</text>
+  <text class="sub quiet" x="264" y="197" text-anchor="middle">C++ protobuf, Boost.Beast WebSocket</text>
+
+  <rect class="box" x="504" y="156" width="216" height="52" rx="8"/>
+  <text class="name ink" x="612" y="178" text-anchor="middle">Launcher</text>
+  <text class="sub quiet" x="612" y="197" text-anchor="middle">Starts and owns the backend</text>
+
+  <!-- falconer-backend -->
+  <rect class="group" x="24" y="300" width="712" height="268" rx="12"/>
+  <text class="label ink" x="720" y="320" text-anchor="end">falconer-backend (C++)</text>
+
+  <!-- Links -->
+  <path class="edge-proto" d="M150 208V326" marker-start="url(#arrow-proto)" marker-end="url(#arrow-proto)"/>
+  <text class="note ink" x="160" y="250">Protobuf over</text>
+  <text class="note ink" x="160" y="266">loopback WebSocket</text>
+  <path class="edge" d="M612 208V298" marker-end="url(#arrow)"/>
+  <text class="note ink" x="604" y="250" text-anchor="end">spawns it, secrets on stdin,</text>
+  <text class="note ink" x="604" y="266" text-anchor="end">port back on stdout</text>
+
+  <rect class="proto" x="40" y="328" width="680" height="44" rx="8"/>
+  <text class="name ink" x="380" y="355" text-anchor="middle">Contract server</text>
+
+  <rect class="box" x="40" y="388" width="680" height="44" rx="8"/>
+  <text class="name ink" x="380" y="415" text-anchor="middle">Coordinator</text>
+
+  <rect class="pervehicle" x="40" y="448" width="216" height="44" rx="8"/>
+  <text class="name ink" x="148" y="475" text-anchor="middle">Adapter, vehicle 1</text>
+  <rect class="pervehicle" x="272" y="448" width="216" height="44" rx="8"/>
+  <text class="name ink" x="380" y="475" text-anchor="middle">Adapter, vehicle 2</text>
+  <rect class="pervehicle" x="504" y="448" width="216" height="44" rx="8"/>
+  <text class="name ink" x="612" y="475" text-anchor="middle">Adapter, vehicle N</text>
+
+  <rect class="box" x="40" y="508" width="680" height="44" rx="8"/>
+  <text class="name ink" x="380" y="535" text-anchor="middle">Connection layer</text>
+
+  <!-- SITL -->
+  <rect class="box" x="40" y="600" width="216" height="52" rx="8"/>
+  <text class="name ink" x="148" y="622" text-anchor="middle">PX4 SITL 1</text>
+  <text class="sub quiet" x="148" y="641" text-anchor="middle">Docker, SIH</text>
+  <rect class="box" x="272" y="600" width="216" height="52" rx="8"/>
+  <text class="name ink" x="380" y="622" text-anchor="middle">PX4 SITL 2</text>
+  <text class="sub quiet" x="380" y="641" text-anchor="middle">Docker, SIH</text>
+  <rect class="box" x="504" y="600" width="216" height="52" rx="8"/>
+  <text class="name ink" x="612" y="622" text-anchor="middle">PX4 SITL N</text>
+  <text class="sub quiet" x="612" y="641" text-anchor="middle">Docker, SIH</text>
+  <text class="note quiet" x="40" y="682">Containers started and stopped by fctl sitl up / down. MAVLink over UDP 14550.</text>
+
+  <g class="edge">
+    <path d="M380 372V386" marker-end="url(#arrow)"/>
+    <path d="M148 432V446" marker-end="url(#arrow)"/>
+    <path d="M380 432V446" marker-end="url(#arrow)"/>
+    <path d="M612 432V446" marker-end="url(#arrow)"/>
+    <path d="M148 492V506" marker-end="url(#arrow)"/>
+    <path d="M380 492V506" marker-end="url(#arrow)"/>
+    <path d="M612 492V506" marker-end="url(#arrow)"/>
+    <path d="M148 552V598" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <path d="M380 552V598" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <path d="M612 552V598" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  </g>
+</svg>

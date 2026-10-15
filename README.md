@@ -53,7 +53,9 @@ The coordinator is where single and multi-vehicle split. Above it nothing knows 
 
 ## Development
 
-The backend is developed and tested without the UI. `fctl` stands in for it: it starts the backend the way the Tauri shell will, authenticates over the contract, and drives vehicles from a live dashboard, a shell or a script.
+The backend is developed and tested without the UI. `fctl` stands in for it: it starts the backend the way the Tauri shell will, authenticates over the contract, and drives vehicles from a live dashboard, a shell or a script. It is all C++, built in the same tree as the backend.
+
+![fctl development stack](docs/fctl.svg)
 
 Requirements (macOS, Homebrew): `cmake ninja mavsdk protobuf boost openssl@3`, plus Docker for PX4 SITL. FTXUI is fetched by CMake.
 
