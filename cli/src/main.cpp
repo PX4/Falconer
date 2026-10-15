@@ -1,9 +1,9 @@
-// fctl: Falconer command-line client.
+// fctl: Falconer terminal ground control station.
 //
-// Stands in for the UI while the backend is developed: starts the backend
-// exactly like the Tauri shell will (secrets over stdin, port over stdout),
-// authenticates over the contract, and runs commands interactively or from
-// a script. Also starts and stops PX4 SITL containers.
+// Starts its own backend exactly like the Falconer app's Tauri shell does
+// (secrets over stdin, port over stdout), authenticates over the contract,
+// and flies vehicles from a live dashboard, an interactive shell or a
+// script. Also starts and stops PX4 SITL containers.
 
 #include "client.h"
 #include "interpreter.h"

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 712" width="760" height="712" role="img" aria-label="fctl: an all C++ client of the same backend and contract">
-  <title>fctl development stack</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 712" width="760" height="712" role="img" aria-label="fctl: a terminal ground control station on the same backend and contract as the Falconer app">
+  <title>fctl architecture</title>
   <style>
     .bg { fill: #ffffff; }
     .ink { fill: #1f2328; }
@@ -46,7 +46,7 @@
   </defs>
 
   <rect class="bg" x="0" y="0" width="760" height="712" rx="12"/>
-  <text class="title ink" x="24" y="36">fctl stands in for the UI: same backend, same contract, all C++</text>
+  <text class="title ink" x="24" y="36">fctl: a terminal ground station on the same backend and contract</text>
 
   <!-- fctl -->
   <rect class="group" x="24" y="52" width="712" height="172" rx="12"/>

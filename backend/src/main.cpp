@@ -1,6 +1,6 @@
 // falconer-backend
 //
-// Launcher protocol (the Tauri shell, or fctl during development):
+// Launcher protocol (the Falconer app's Tauri shell, or fctl):
 //   1. The launcher starts the backend with stdin and stdout as pipes.
 //   2. It writes one line to stdin: "<client_secret_hex> <server_secret_hex>",
 //      fresh random 32-byte secrets per launch.

@@ -2,7 +2,14 @@
 
 Falconer is a mission planning and execution app for [PX4](https://px4.io): a focused, lean command and control app for pilots, backed by the [Dronecode Foundation](https://dronecode.org).
 
-> **Status:** early development, no usable release yet. The backend and a command-line client exist today; the app UI does not. See [Status](#status).
+**Two apps, one backend.** Falconer is built as one C++ backend that does all vehicle work, with two ground stations on top of it:
+
+- **Falconer app**: the graphical ground station for desktop and mobile, web-based in TypeScript (Svelte 5 in a Tauri 2 shell).
+- **[fctl](#fctl-terminal-ground-control-station)**: the terminal ground station, written in C++.
+
+Both speak the same contract to the same backend, so a vehicle behaves the same whichever one is flying it.
+
+> **Status:** early development. The backend and fctl fly vehicles today; the Falconer app UI is not started yet. See [Status](#status).
 
 ## Design goals
 
@@ -18,7 +25,7 @@ Falconer is a mission planning and execution app for [PX4](https://px4.io): a fo
 
 ## Architecture
 
-Falconer is two halves on the same machine: a Svelte 5 UI in a Tauri 2 shell, and a C++ backend built around [MAVSDK](https://github.com/mavlink/MAVSDK), joined by an internal protobuf contract.
+The backend is C++ built around [MAVSDK](https://github.com/mavlink/MAVSDK). Each app starts its own backend on the same machine and talks to it over an internal protobuf contract. The diagram shows the Falconer app; fctl replaces the top half with C++ (see [fctl](#fctl-terminal-ground-control-station)).
 
 ![Falconer runtime stack](docs/architecture.svg)
 
@@ -31,6 +38,32 @@ The coordinator is where single and multi-vehicle split. Above it nothing knows 
 - **Video** runs on its own path, never through the contract, and reaches the WebView over WebRTC.
 - **Platforms**: Windows, macOS, Linux, iOS and Android, including Android handheld controllers. Current hardware and the latest two major OS versions only.
 
+## fctl: terminal ground control station
+
+fctl is a complete ground control station that runs in a terminal. It uses the same backend and the same contract as the Falconer app, so every command goes through the same coordinator, per-vehicle adapters and safety checks. It runs anywhere a terminal does, including over SSH and on headless Linux machines, and every operation can be scripted.
+
+![fctl architecture](docs/fctl.svg)
+
+- **Live fleet dashboard** (`fctl top`): every vehicle's link, arming state, mode, altitude, speed, battery and GPS, refreshed live, with a detail panel for the selected vehicle and an event log.
+- **Group commands**: arm, take off, land and return to launch any set of vehicles at once, with a result per vehicle, so a partial failure is never hidden.
+- **Arming checks**: PX4's own reasons a vehicle cannot arm, shown as they change.
+- **Scripting**: `fctl run` executes a command sequence, stops at the first failure and exits non-zero, for repeatable operations and automation.
+- **Secure by default**: fctl starts its own backend on `127.0.0.1` with fresh secrets per launch, and the two authenticate each other before any command is accepted.
+- **Simulation built in**: `fctl sitl up N` starts N PX4 SITL vehicles in Docker, from a pinned image.
+
+```sh
+fctl top                 # live dashboard with a command line
+fctl                     # interactive shell; type "help"
+fctl run -c "wait 2; wait-until all armable; arm all; takeoff all 10; wait-alt all 9.5; land all"
+fctl run mission.fctl    # commands from a file, one per line
+
+fctl sitl up 2           # two simulated PX4 vehicles
+fctl sitl ps
+fctl sitl down
+```
+
+Vehicles connect over MAVLink on UDP port 14550 (`--mavlink-port` to change). Backend logs and simulator ULogs are written to `.falconer/` (`--data-dir` to change).
+
 ## Status
 
 | Part | State |
@@ -38,41 +71,29 @@ The coordinator is where single and multi-vehicle split. Above it nothing knows 
 | Contract, handshake, local security | Working |
 | Connection layer (UDP), per-vehicle adapters | Working; radios and serial not yet |
 | Coordinator: group arm, takeoff, land, RTL | Working; missions, swarm and journal not yet |
-| `fctl` CLI and terminal dashboard | Working |
-| Tauri app, UI, maps, video, manual control | Not started |
+| fctl: dashboard, shell, scripting, SITL | Working; missions and manual control not yet |
+| Falconer app: UI, maps, video, manual control | Not started |
 
 ## Repository layout
 
 | Path | What |
 | --- | --- |
-| `proto/` | The UI/backend contract |
+| `proto/` | The contract between the ground stations and the backend |
 | `backend/` | C++ backend (`falconer-backend`) |
-| `cli/` | `fctl`, the command-line client used for backend development |
+| `cli/` | fctl, the terminal ground control station |
 | `sitl/` | Pinned PX4 SITL container image |
 | `docs/` | Diagrams |
 
-## Development
+## Building from source
 
-The backend is developed and tested without the UI. `fctl` stands in for it: it starts the backend the way the Tauri shell will, authenticates over the contract, and drives vehicles from a live dashboard, a shell or a script. It is all C++, built in the same tree as the backend.
-
-![fctl development stack](docs/fctl.svg)
-
-Requirements (macOS, Homebrew): `cmake ninja mavsdk protobuf boost openssl@3`, plus Docker for PX4 SITL. FTXUI is fetched by CMake.
+Requirements (macOS, Homebrew): `cmake ninja mavsdk protobuf boost openssl@3`. Docker is needed for `fctl sitl`. FTXUI is fetched by CMake.
 
 ```sh
 cmake -S . -B build -G Ninja
 cmake --build build
-
-./build/cli/fctl sitl up 2       # two PX4 SITL (SIH) vehicles in Docker
-./build/cli/fctl top             # live dashboard: fleet table, vehicle detail, events, command line
-./build/cli/fctl                 # plain interactive shell; type "help"
-./build/cli/fctl run -c "wait 2; wait-until all armable; arm all; takeoff all 10; wait-alt all 9.5; land all"
-./build/cli/fctl sitl down
 ```
 
-`fctl run` stops at the first failed command and exits non-zero. Backend logs and SITL ULogs go to `.falconer/`. The SITL image is pinned in `sitl/image`.
-
-For a sanitizer build, add `-DFALCONER_SANITIZER=address` (or `thread`) in a separate build directory.
+This builds `build/backend/falconer-backend` and `build/cli/fctl`; fctl finds the backend it was built with. For a sanitizer build, add `-DFALCONER_SANITIZER=address` (or `thread`) in a separate build directory.
 
 ## License
 
