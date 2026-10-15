@@ -41,6 +41,34 @@ std::optional<v1::Error> to_error(mavsdk::Action::Result result)
     return error;
 }
 
+std::optional<v1::Error> to_error(mavsdk::MissionRaw::Result result)
+{
+    using R = mavsdk::MissionRaw::Result;
+    if (result == R::Success) {
+        return std::nullopt;
+    }
+    v1::Error error;
+    switch (result) {
+        case R::NoSystem:
+            error.set_code(v1::ERROR_CODE_NOT_CONNECTED);
+            break;
+        case R::Timeout:
+            error.set_code(v1::ERROR_CODE_TIMEOUT);
+            break;
+        case R::InvalidArgument:
+        case R::FailedToOpenQgcPlan:
+        case R::FailedToParseQgcPlan:
+        case R::NoMissionAvailable:
+            error.set_code(v1::ERROR_CODE_INVALID_REQUEST);
+            break;
+        default:
+            error.set_code(v1::ERROR_CODE_VEHICLE_REJECTED);
+            break;
+    }
+    error.set_message(to_text(result));
+    return error;
+}
+
 v1::Error make_error(v1::ErrorCode code, const std::string& message)
 {
     v1::Error error;
@@ -81,6 +109,7 @@ VehicleAdapter::~VehicleAdapter()
     mavsdk_.unsubscribe_on_new_system(new_system_handle_);
     mavsdk_.unsubscribe_raw_bytes_to_be_sent(raw_handle_);
     events_.reset();
+    mission_.reset();
     action_.reset();
     telemetry_.reset();
 }
@@ -115,6 +144,7 @@ void VehicleAdapter::attach(std::shared_ptr<mavsdk::System> system)
     system_ = std::move(system);
     telemetry_ = std::make_unique<mavsdk::Telemetry>(system_);
     action_ = std::make_unique<mavsdk::Action>(system_);
+    mission_ = std::make_unique<mavsdk::MissionRaw>(system_);
     connected_ = system_->is_connected();
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
@@ -197,6 +227,12 @@ void VehicleAdapter::subscribe_telemetry()
         state_.set_armable(health.is_armable);
     });
 
+    mission_->subscribe_mission_progress([this](mavsdk::MissionRaw::MissionProgress progress) {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        state_.mutable_mission()->set_current(progress.current);
+        state_.mutable_mission()->set_total(progress.total);
+    });
+
     // The events plugin may do blocking work, so it is created off the io
     // thread like every other MAVSDK call.
     asio::post(mavsdk_pool_, [this, system = system_]() {
@@ -221,15 +257,60 @@ v1::VehicleState VehicleAdapter::snapshot() const
     return state_;
 }
 
+std::optional<v1::Error> VehicleAdapter::check_ready() const
+{
+    if (!action_) {
+        return make_error(v1::ERROR_CODE_NOT_CONNECTED, "vehicle not ready");
+    }
+    if (!connected_) {
+        return make_error(v1::ERROR_CODE_NOT_CONNECTED, "vehicle not connected");
+    }
+    return std::nullopt;
+}
+
+void VehicleAdapter::run_mission(
+    const std::function<void(mavsdk::MissionRaw::ResultCallback)>& start, Done done)
+{
+    if (auto error = check_ready()) {
+        done(error);
+        return;
+    }
+    auto callback = [this, done = std::move(done)](mavsdk::MissionRaw::Result result) {
+        post([done, result]() { done(to_error(result)); });
+    };
+    asio::post(mavsdk_pool_, [start, callback = std::move(callback)]() { start(callback); });
+}
+
+void VehicleAdapter::upload_mission(const std::string& qgc_plan, Done done)
+{
+    // Parse here, on the io thread: it is pure parsing, no vehicle traffic.
+    const auto [result, data] = mission_
+                                    ? mission_->import_qgroundcontrol_mission_from_string(qgc_plan)
+                                    : std::make_pair(mavsdk::MissionRaw::Result::NoSystem,
+                                                     mavsdk::MissionRaw::MissionImportData{});
+    if (auto error = to_error(result)) {
+        done(error);
+        return;
+    }
+    if (data.mission_items.empty()) {
+        done(make_error(v1::ERROR_CODE_INVALID_REQUEST, "plan has no mission items"));
+        return;
+    }
+    run_mission(
+        [this, items = data.mission_items](auto cb) { mission_->upload_mission_async(items, cb); },
+        std::move(done));
+}
+
+void VehicleAdapter::start_mission(Done done)
+{
+    run_mission([this](auto cb) { mission_->start_mission_async(cb); }, std::move(done));
+}
+
 void VehicleAdapter::run(
     const std::function<void(mavsdk::Action::ResultCallback)>& start, Done done)
 {
-    if (!action_) {
-        done(make_error(v1::ERROR_CODE_NOT_CONNECTED, "vehicle not ready"));
-        return;
-    }
-    if (!connected_) {
-        done(make_error(v1::ERROR_CODE_NOT_CONNECTED, "vehicle not connected"));
+    if (auto error = check_ready()) {
+        done(error);
         return;
     }
     auto callback = [this, done = std::move(done)](mavsdk::Action::Result result) {

@@ -71,6 +71,8 @@ message Request {
     ReturnToLaunch return_to_launch = 15;
     Subscribe subscribe = 16;
     Unsubscribe unsubscribe = 17;
+    UploadMission upload_mission = 18;
+    StartMission start_mission = 19;
   }
 }
 
@@ -95,6 +97,17 @@ message Land {
 }
 
 message ReturnToLaunch {
+  repeated string vehicle_ids = 1;
+}
+
+// Uploads the mission items of a QGroundControl .plan file (JSON text) to
+// each vehicle. Geofence and rally points in the plan are not uploaded.
+message UploadMission {
+  repeated string vehicle_ids = 1;
+  string qgc_plan = 2;
+}
+
+message StartMission {
   repeated string vehicle_ids = 1;
 }
 
@@ -196,6 +209,13 @@ message VehicleState {
   // from PX4's health and arming checks. Empty when nothing does, or before
   // PX4 has reported.
   repeated ArmingProblem arming_problems = 13;
+  MissionProgress mission = 14;
+}
+
+message MissionProgress {
+  // Index of the current mission item. Equal to total when finished.
+  int32 current = 1;
+  int32 total = 2;
 }
 
 message ArmingProblem {

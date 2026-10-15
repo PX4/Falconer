@@ -166,6 +166,26 @@ void Coordinator::execute(const v1::Request& request, Reply reply)
                 },
                 std::move(reply));
             return;
+        case v1::Request::kUploadMission: {
+            auto plan = std::make_shared<std::string>(request.upload_mission().qgc_plan());
+            run_group(
+                request_id,
+                request.upload_mission().vehicle_ids(),
+                [plan](VehicleAdapter& v, VehicleAdapter::Done done) {
+                    v.upload_mission(*plan, std::move(done));
+                },
+                std::move(reply));
+            return;
+        }
+        case v1::Request::kStartMission:
+            run_group(
+                request_id,
+                request.start_mission().vehicle_ids(),
+                [](VehicleAdapter& v, VehicleAdapter::Done done) {
+                    v.start_mission(std::move(done));
+                },
+                std::move(reply));
+            return;
         default:
             reply(error_response(
                 request_id, v1::ERROR_CODE_INVALID_REQUEST, "not a vehicle command"));

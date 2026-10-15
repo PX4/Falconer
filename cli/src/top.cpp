@@ -143,6 +143,11 @@ Element detail_panel(const v1::VehicleInfo& info, const v1::VehicleState* s)
     std::snprintf(buf, sizeof(buf), "bat   %.0f%%   %.2f V", s->battery().remaining_percent(),
                   s->battery().voltage_v());
     lines.push_back(text(buf));
+    if (s->mission().total() > 0) {
+        std::snprintf(buf, sizeof(buf), "mission   item %d of %d", s->mission().current(),
+                      s->mission().total());
+        lines.push_back(text(buf));
+    }
 
     if (s->arming_problems_size() == 0) {
         lines.push_back(text("arming checks: no problems reported") | color(Color::Green));

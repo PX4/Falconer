@@ -35,3 +35,6 @@ src-tauri/gen/
 
 # fctl runtime data (backend logs, SITL ULogs)
 /.falconer/
+
+# Generated contract client for the web app (npm run gen)
+/app/src/gen/

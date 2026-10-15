@@ -7,6 +7,7 @@
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/events/events.h>
+#include <mavsdk/plugins/mission_raw/mission_raw.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 
 #include <functional>
@@ -57,12 +58,17 @@ public:
     void takeoff(float altitude_m, Done done);
     void land(Done done);
     void return_to_launch(Done done);
+    void upload_mission(const std::string& qgc_plan, Done done);
+    void start_mission(Done done);
 
 private:
     void on_new_system();
     void attach(std::shared_ptr<mavsdk::System> system);
     void subscribe_telemetry();
     void run(const std::function<void(mavsdk::Action::ResultCallback)>& start, Done done);
+    void run_mission(
+        const std::function<void(mavsdk::MissionRaw::ResultCallback)>& start, Done done);
+    std::optional<v1::Error> check_ready() const;
     void post(std::function<void()> fn);
 
     asio::io_context& io_;
@@ -79,6 +85,7 @@ private:
     std::shared_ptr<mavsdk::System> system_;
     std::unique_ptr<mavsdk::Telemetry> telemetry_;
     std::unique_ptr<mavsdk::Action> action_;
+    std::unique_ptr<mavsdk::MissionRaw> mission_;
     // Created on the MAVSDK pool; only touched again on destruction.
     std::unique_ptr<mavsdk::Events> events_;
     bool connected_ = false;

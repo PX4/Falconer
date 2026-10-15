@@ -9,7 +9,7 @@ Falconer is a mission planning and execution app for [PX4](https://px4.io): a fo
 
 Both speak the same contract to the same backend, so a vehicle behaves the same whichever one is flying it.
 
-> **Status:** early development. The backend and fctl fly vehicles today; the Falconer app UI is not started yet. See [Status](#status).
+> **Status:** early development. The backend and fctl fly vehicles today; the Falconer app has a first map view running in the browser. See [Status](#status).
 
 ## Design goals
 
@@ -70,9 +70,9 @@ Vehicles connect over MAVLink on UDP port 14550 (`--mavlink-port` to change). Ba
 | --- | --- |
 | Contract, handshake, local security | Working |
 | Connection layer (UDP), per-vehicle adapters | Working; radios and serial not yet |
-| Coordinator: group arm, takeoff, land, RTL | Working; missions, swarm and journal not yet |
-| fctl: dashboard, shell, scripting, SITL | Working; missions and manual control not yet |
-| Falconer app: UI, maps, video, manual control | Not started |
+| Coordinator: group arm, takeoff, land, RTL, mission upload and start | Working; swarm and journal not yet |
+| fctl: dashboard, shell, scripting, missions, SITL | Working; manual control not yet |
+| Falconer app: map view, live vehicles, mission route, mission controls | Working in the browser; Tauri shell, planning, video and manual control not yet |
 
 ## Repository layout
 
@@ -81,6 +81,8 @@ Vehicles connect over MAVLink on UDP port 14550 (`--mavlink-port` to change). Ba
 | `proto/` | The contract between the ground stations and the backend |
 | `backend/` | C++ backend (`falconer-backend`) |
 | `cli/` | fctl, the terminal ground control station |
+| `app/` | Falconer app (Svelte 5, TypeScript) and its integration tests |
+| `missions/` | Example missions (QGroundControl `.plan`) |
 | `sitl/` | Pinned PX4 SITL container image |
 | `docs/` | Diagrams |
 
@@ -94,6 +96,24 @@ cmake --build build
 ```
 
 This builds `build/backend/falconer-backend` and `build/cli/fctl`; fctl finds the backend it was built with. For a sanitizer build, add `-DFALCONER_SANITIZER=address` (or `thread`) in a separate build directory.
+
+### Falconer app
+
+The app runs in the browser during development; the Tauri shell comes later. Requires Node 24 and the backend built above.
+
+```sh
+cd app
+npm install              # also generates the contract client
+npm run dev              # http://127.0.0.1:5173, starts its own backend
+```
+
+The dev server plays the Tauri shell's role: it starts `falconer-backend` with fresh secrets and hands them to the page. It listens on `127.0.0.1` only and is for development, not deployment. Map tiles come from OpenStreetMap.
+
+### Integration test
+
+`npm run test:integration` (in `app/`) starts a fresh PX4 SITL vehicle and the app, then flies the example mission entirely through the UI: load, upload, arm, start. It checks that the route is drawn, the vehicle climbs, its marker moves along the planned route and the mission advances, and that the marker matches the telemetry panel. A run takes about 1.5 minutes and records a video and screenshot in `.falconer/test-results/`.
+
+It refuses to run if fctl SITL containers are already up, since they may be someone else's; set `FALCONER_TEST_RESTART_SITL=1` to replace them, or `FALCONER_TEST_KEEP_SITL=1` to leave the vehicle running afterwards.
 
 ## License
 

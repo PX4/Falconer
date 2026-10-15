@@ -1,0 +1,32 @@
+{
+  "name": "@falconer/app",
+  "private": true,
+  "type": "module",
+  "description": "Falconer app: graphical ground station (Svelte 5)",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "gen": "mkdir -p src/gen && protoc --plugin=protoc-gen-es=./node_modules/.bin/protoc-gen-es --es_out=src/gen --es_opt=target=ts,import_extension=js -I ../proto ../proto/falconer/v1/contract.proto",
+    "prepare": "npm run gen",
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test:integration": "playwright test"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.16.0",
+    "maplibre-gl": "^6.14.0"
+  },
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "^2.16.0",
+    "@playwright/test": "^1.64.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^26.6.5",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.6",
+    "typescript": "~5.9",
+    "vite": "^8.3.4"
+  }
+}

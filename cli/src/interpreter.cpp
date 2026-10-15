@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <fstream>
 #include <sstream>
 #include <thread>
 
@@ -81,7 +82,8 @@ std::string format_state_detail(const v1::VehicleState& s)
         "  attitude     roll %.1f, pitch %.1f, yaw %.1f deg\n"
         "  velocity     N %.2f, E %.2f, D %.2f m/s\n"
         "  battery      %.0f%%, %.2f V\n"
-        "  gps          %s, %d satellites",
+        "  gps          %s, %d satellites\n"
+        "  mission      item %d of %d",
         s.id().c_str(),
         s.connected() ? "yes" : "no",
         s.armed() ? "yes" : "no",
@@ -102,7 +104,9 @@ std::string format_state_detail(const v1::VehicleState& s)
         s.battery().remaining_percent(),
         s.battery().voltage_v(),
         s.gps().fix_type().c_str(),
-        s.gps().num_satellites());
+        s.gps().num_satellites(),
+        s.mission().current(),
+        s.mission().total());
     std::string text = out;
     for (const auto& problem : s.arming_problems()) {
         text += "\n  problem      " + problem.severity() + ": " + problem.message();
@@ -153,6 +157,9 @@ std::string Interpreter::help()
   takeoff <ids|all> [alt_m]        take off, optionally to alt_m above home
   land <ids|all>                   land
   rtl <ids|all>                    return to launch
+  mission upload <ids|all> <file.plan>
+                                   upload the mission items of a QGC plan
+  mission start <ids|all>          start the uploaded mission
   wait <n> [timeout_s]             wait until at least n vehicles are known
   wait-until <ids|all> <cond> [timeout_s]
                                    cond: armable, armed, disarmed, in-air, landed
@@ -285,6 +292,9 @@ Interpreter::Result Interpreter::execute(const std::string& line)
             cmd == "rtl") {
             return cmd_group(cmd, args);
         }
+        if (cmd == "mission") {
+            return cmd_mission(args);
+        }
         if (cmd == "wait") {
             return cmd_wait(args);
         }
@@ -416,6 +426,40 @@ Interpreter::Result Interpreter::cmd_group(const std::string& name, const Args& 
         request.mutable_return_to_launch()->mutable_vehicle_ids()->Assign(ids.begin(), ids.end());
     }
     return report_group(send(request));
+}
+
+Interpreter::Result Interpreter::cmd_mission(const Args& args)
+{
+    if (args.size() >= 4 && args[1] == "upload") {
+        std::ifstream in(args.back());
+        if (!in) {
+            print_error("cannot read " + args.back());
+            return Result::Failed;
+        }
+        std::stringstream plan;
+        plan << in.rdbuf();
+        const auto ids = resolve_ids(args, 2, args.size() - 1);
+        if (ids.empty()) {
+            print_error("mission upload: no vehicles given (or none known yet)");
+            return Result::Failed;
+        }
+        v1::Request request;
+        request.mutable_upload_mission()->mutable_vehicle_ids()->Assign(ids.begin(), ids.end());
+        request.mutable_upload_mission()->set_qgc_plan(plan.str());
+        return report_group(send(request));
+    }
+    if (args.size() >= 3 && args[1] == "start") {
+        const auto ids = resolve_ids(args, 2, args.size());
+        if (ids.empty()) {
+            print_error("mission start: no vehicles given (or none known yet)");
+            return Result::Failed;
+        }
+        v1::Request request;
+        request.mutable_start_mission()->mutable_vehicle_ids()->Assign(ids.begin(), ids.end());
+        return report_group(send(request));
+    }
+    print_error("usage: mission upload <ids|all> <file.plan> | mission start <ids|all>");
+    return Result::Failed;
 }
 
 Interpreter::Result Interpreter::report_group(const v1::Response& response)

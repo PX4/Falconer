@@ -26,19 +26,24 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
 struct Options {
     uint16_t mavlink_port = 14550;
     int stream_rate_hz = 10;
+    // Extra exact WebSocket origins to accept, for the browser development
+    // build of the Falconer app (e.g. http://127.0.0.1:5173).
+    std::vector<std::string> allow_origins;
 };
 
 void print_usage()
 {
     std::fprintf(
         stderr,
-        "usage: falconer-backend [--mavlink-port N] [--stream-rate HZ] [--version]\n"
+        "usage: falconer-backend [--mavlink-port N] [--stream-rate HZ] [--allow-origin ORIGIN]...\n"
+        "                        [--version]\n"
         "Reads per-launch secrets from stdin; see the launcher protocol in main.cpp.\n");
 }
 
@@ -67,6 +72,11 @@ bool parse_args(int argc, char** argv, Options& options)
                 return false;
             }
             options.mavlink_port = static_cast<uint16_t>(port);
+        } else if (arg == "--allow-origin") {
+            if (i + 1 >= argc) {
+                return false;
+            }
+            options.allow_origins.emplace_back(argv[++i]);
         } else if (arg == "--stream-rate") {
             if (!next_int(options.stream_rate_hz) || options.stream_rate_hz <= 0 ||
                 options.stream_rate_hz > 120) {
@@ -145,7 +155,11 @@ int main(int argc, char** argv)
         coordinator,
         std::move(*secrets),
         FALCONER_VERSION,
-        std::chrono::milliseconds(1000 / options.stream_rate_hz));
+        std::chrono::milliseconds(1000 / options.stream_rate_hz),
+        options.allow_origins);
+    for (const auto& origin : options.allow_origins) {
+        log_warn("accepting extra WebSocket origin " + origin);
+    }
 
     auto shutdown = [&]() {
         log_info("shutting down");

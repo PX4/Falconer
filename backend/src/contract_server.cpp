@@ -30,19 +30,6 @@ constexpr std::array<std::string_view, 3> kAllowedOrigins = {
     "https://tauri.localhost",
 };
 
-bool origin_allowed(std::string_view origin)
-{
-    if (origin.empty()) {
-        return true;
-    }
-    for (const auto allowed : kAllowedOrigins) {
-        if (origin == allowed) {
-            return true;
-        }
-    }
-    return false;
-}
-
 // Answers a rejected upgrade with a plain HTTP error and closes.
 void reject(tcp::socket socket, http::status status, std::string reason)
 {
@@ -109,7 +96,7 @@ private:
             return;
         }
         const auto origin = request_[http::field::origin];
-        if (!origin_allowed(origin)) {
+        if (!server_.origin_allowed(origin)) {
             log_warn("contract: rejected connection from origin " + std::string(origin));
             state_ = State::Closed;
             reject(
@@ -368,14 +355,34 @@ ContractServer::ContractServer(
     Coordinator& coordinator,
     SessionSecrets secrets,
     std::string version,
-    std::chrono::milliseconds stream_period) :
+    std::chrono::milliseconds stream_period,
+    std::vector<std::string> extra_origins) :
     coordinator_(coordinator),
     secrets_(std::move(secrets)),
     version_(std::move(version)),
     stream_period_(stream_period),
+    extra_origins_(std::move(extra_origins)),
     acceptor_(io, tcp::endpoint(asio::ip::make_address("127.0.0.1"), 0)),
     tick_timer_(io)
 {}
+
+bool ContractServer::origin_allowed(std::string_view origin) const
+{
+    if (origin.empty()) {
+        return true;
+    }
+    for (const auto allowed : kAllowedOrigins) {
+        if (origin == allowed) {
+            return true;
+        }
+    }
+    for (const auto& allowed : extra_origins_) {
+        if (origin == allowed) {
+            return true;
+        }
+    }
+    return false;
+}
 
 uint16_t ContractServer::port() const
 {

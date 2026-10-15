@@ -8,6 +8,8 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace falconer {
 
@@ -24,7 +26,8 @@ public:
         Coordinator& coordinator,
         SessionSecrets secrets,
         std::string version,
-        std::chrono::milliseconds stream_period);
+        std::chrono::milliseconds stream_period,
+        std::vector<std::string> extra_origins = {});
 
     uint16_t port() const;
     void start();
@@ -33,6 +36,7 @@ public:
     Coordinator& coordinator() { return coordinator_; }
     const SessionSecrets& secrets() const { return secrets_; }
     const std::string& version() const { return version_; }
+    bool origin_allowed(std::string_view origin) const;
 
 private:
     void accept();
@@ -43,6 +47,7 @@ private:
     SessionSecrets secrets_;
     std::string version_;
     std::chrono::milliseconds stream_period_;
+    std::vector<std::string> extra_origins_;
     tcp::acceptor acceptor_;
     asio::steady_timer tick_timer_;
     std::weak_ptr<Session> session_;

@@ -45,6 +45,7 @@ private:
 
     Result cmd_vehicles();
     Result cmd_group(const std::string& name, const Args& args);
+    Result cmd_mission(const Args& args);
     Result cmd_state(const Args& args);
     Result cmd_watch(const Args& args);
     Result cmd_wait(const Args& args);
