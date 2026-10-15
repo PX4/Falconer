@@ -32,3 +32,6 @@ src-tauri/gen/
 # Logs
 *.log
 *.ulg
+
+# fctl runtime data (backend logs, SITL ULogs)
+/.falconer/

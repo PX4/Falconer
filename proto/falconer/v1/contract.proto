@@ -1,0 +1,236 @@
+// Falconer internal contract between the UI (or fctl) and the backend.
+//
+// Internal only: shipped and versioned in lockstep with the app, no
+// backward-compatibility machinery. Both sides refuse to run on a version
+// mismatch.
+//
+// Transport: one loopback WebSocket, binary frames, one ClientMessage or
+// ServerMessage per frame.
+//
+// Session handshake (mutual authentication, secrets never cross the wire):
+//   client -> Hello      { version, client_nonce }
+//   server -> HelloAck   { version, server_nonce, server_proof = HMAC(server_secret, client_nonce) }
+//   client verifies server_proof, then
+//   client -> Auth       { client_proof = HMAC(client_secret, server_nonce) }
+//   server -> AuthOk
+// Any failure: server sends ServerMessage.fatal and closes.
+
+syntax = "proto3";
+
+package falconer.v1;
+
+message ClientMessage {
+  oneof msg {
+    Hello hello = 1;
+    Auth auth = 2;
+    Request request = 3;
+  }
+}
+
+message ServerMessage {
+  oneof msg {
+    HelloAck hello_ack = 1;
+    AuthOk auth_ok = 2;
+    Response response = 3;
+    StreamBatch stream = 4;
+    Error fatal = 5;
+  }
+}
+
+// ---- Handshake ----
+
+message Hello {
+  string version = 1;
+  bytes client_nonce = 2;
+}
+
+message HelloAck {
+  string version = 1;
+  bytes server_nonce = 2;
+  bytes server_proof = 3;
+}
+
+message Auth {
+  bytes client_proof = 1;
+}
+
+message AuthOk {}
+
+// ---- Commands ----
+
+// Every command that acts on vehicles takes a list of vehicle IDs. A single
+// vehicle is a group of one; the result always carries one entry per vehicle.
+message Request {
+  uint32 request_id = 1;
+  oneof cmd {
+    ListVehicles list_vehicles = 10;
+    Arm arm = 11;
+    Disarm disarm = 12;
+    Takeoff takeoff = 13;
+    Land land = 14;
+    ReturnToLaunch return_to_launch = 15;
+    Subscribe subscribe = 16;
+    Unsubscribe unsubscribe = 17;
+  }
+}
+
+message ListVehicles {}
+
+message Arm {
+  repeated string vehicle_ids = 1;
+}
+
+message Disarm {
+  repeated string vehicle_ids = 1;
+}
+
+message Takeoff {
+  repeated string vehicle_ids = 1;
+  // Takeoff altitude above home in meters. 0 keeps the vehicle's setting.
+  float altitude_m = 2;
+}
+
+message Land {
+  repeated string vehicle_ids = 1;
+}
+
+message ReturnToLaunch {
+  repeated string vehicle_ids = 1;
+}
+
+// Start streaming VehicleState for these vehicles. Empty means all vehicles,
+// including ones that appear later.
+message Subscribe {
+  repeated string vehicle_ids = 1;
+}
+
+message Unsubscribe {}
+
+message Response {
+  uint32 request_id = 1;
+  oneof result {
+    Error error = 2;
+    GroupResult group = 3;
+    VehicleList vehicle_list = 4;
+    Ok ok = 5;
+  }
+}
+
+message Ok {}
+
+message GroupResult {
+  repeated VehicleResult results = 1;
+}
+
+message VehicleResult {
+  string vehicle_id = 1;
+  // Unset means success.
+  Error error = 2;
+}
+
+message Error {
+  ErrorCode code = 1;
+  string message = 2;
+}
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_INVALID_REQUEST = 1;
+  ERROR_CODE_UNKNOWN_VEHICLE = 2;
+  ERROR_CODE_NOT_CONNECTED = 3;
+  ERROR_CODE_VEHICLE_REJECTED = 4;
+  ERROR_CODE_TIMEOUT = 5;
+  ERROR_CODE_VERSION_MISMATCH = 6;
+  ERROR_CODE_AUTH_FAILED = 7;
+  ERROR_CODE_INTERNAL = 8;
+}
+
+// ---- Vehicles ----
+
+message VehicleList {
+  repeated VehicleInfo vehicles = 1;
+}
+
+message VehicleInfo {
+  // Opaque ID, the only way to address a vehicle in the contract.
+  string id = 1;
+  bool connected = 2;
+  // MAVLink system ID, for display only. Never use it as an identifier.
+  uint32 display_system_id = 3;
+  // Another stream reports the same system ID. Both vehicles are kept apart
+  // and flagged; they are never merged.
+  bool system_id_conflict = 4;
+}
+
+// ---- Streams ----
+
+// Sent at a bounded rate, carrying the latest state of each subscribed
+// vehicle plus any fleet events since the previous batch. Fleet events are
+// sent whether or not there is a subscription.
+message StreamBatch {
+  repeated VehicleState vehicles = 1;
+  repeated FleetEvent events = 2;
+}
+
+message FleetEvent {
+  oneof event {
+    VehicleInfo vehicle_added = 1;
+    VehicleInfo vehicle_changed = 2;
+  }
+}
+
+message VehicleState {
+  string id = 1;
+  bool connected = 2;
+  bool armed = 3;
+  bool in_air = 4;
+  string flight_mode = 5;
+  string landed_state = 6;
+  bool armable = 7;
+  Position position = 8;
+  Attitude attitude = 9;
+  VelocityNed velocity = 10;
+  Battery battery = 11;
+  Gps gps = 12;
+  // What currently blocks arming in the mode the vehicle intends to arm in,
+  // from PX4's health and arming checks. Empty when nothing does, or before
+  // PX4 has reported.
+  repeated ArmingProblem arming_problems = 13;
+}
+
+message ArmingProblem {
+  string message = 1;
+  // PX4 health component, e.g. "gps". May be empty.
+  string component = 2;
+  // PX4 log level, e.g. "Error", "Warning".
+  string severity = 3;
+}
+
+message Position {
+  double latitude_deg = 1;
+  double longitude_deg = 2;
+  float absolute_altitude_m = 3;
+  float relative_altitude_m = 4;
+}
+
+message Attitude {
+  float roll_deg = 1;
+  float pitch_deg = 2;
+  float yaw_deg = 3;
+}
+
+message VelocityNed {
+  float north_m_s = 1;
+  float east_m_s = 2;
+  float down_m_s = 3;
+}
+
+message Battery {
+  float remaining_percent = 1;
+  float voltage_v = 2;
+}
+
+message Gps {
+  string fix_type = 1;
+  int32 num_satellites = 2;
+}
