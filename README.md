@@ -16,20 +16,6 @@ Falconer is a mission planning and execution app for [PX4](https://px4.io): a fo
 - **Crash recovery**: after a crash or restart, Falconer picks up exactly where the operator left off.
 - **Vendor rebranding without code**: logo, colors and fonts through a theme. Layout changes require code.
 
-## Non-goals
-
-Falconer stays focused by leaving out everything that turns a ground station into a vehicle configuration tool.
-
-- No vehicle setup, calibration, tuning, parameter editing or firmware flashing. Read-only preflight checks are allowed.
-- No log analysis. Logs are downloaded and handed off.
-- No support for other autopilots.
-- No raw MAVLink in the UI. MAVLink stops at the backend.
-- No custom MAVLink dialects. Vendors fork, or get support added upstream in MAVSDK.
-- No plugin system in v1.
-- No public API. The backend contract serves Falconer's own UI only.
-- No remote UI or remote backend. UI and backend always run on the same machine.
-- No support for older devices or OS versions.
-
 ## Architecture
 
 Falconer is two halves on the same machine: a Svelte 5 UI in a Tauri 2 shell, and a C++ backend built around [MAVSDK](https://github.com/mavlink/MAVSDK), joined by an internal protobuf contract.
